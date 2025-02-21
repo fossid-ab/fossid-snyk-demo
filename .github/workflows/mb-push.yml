@@ -13,7 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Zip Code; Ignoring File Types
         run: |
@@ -46,6 +46,7 @@ jobs:
             --project_code $GITHUB_REPOSITORY \
             --scan_code $GITHUB_REPOSITORY/$GITHUB_REF_NAME \
             --path $GITHUB_WORKSPACE/code.zip \
+            --chunked_upload \
             --auto_identification_resolve_pending_ids \
             --auto_identification_detect_declaration \
             --auto_identification_detect_copyright \
