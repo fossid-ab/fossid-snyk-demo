@@ -1,0 +1,47 @@
+## This workflow runs when a PR is opened for the Develop Branch.
+name: Checks on PR to Develop
+
+on:
+  pull_request:
+    branches: [ develop ]
+
+jobs:
+  ## First, we run the Diff Scanner (Stateless Scan).
+  ## This will annotate the PR with newly found snippets.
+  #run-diffscan:
+  #  name: FossID Annotate PR
+  #  runs-on: ubuntu-latest
+  #  container:
+  #    image: quay.io/fossid/fossid-cicd:latest
+  #    credentials:
+  #      username: ${{ secrets.QUAY_USER }}
+  #      password: ${{ secrets.QUAY_TOKEN }}
+  #  steps:
+  #    - name: Checkout code
+  #      uses: actions/checkout@v4
+  #    - name: Run fossid-cicd
+  #      run: |
+  #        fossid-cicd \
+  #        diff-scan \
+  #        --fossid-host ${{ secrets.KB_URL }} \
+  #        --fossid-token ${{ secrets.KB_TOKEN }} \
+  #        --github-workflow-errors
+
+  ## Next, we will check if the scan for the HEAD branch has Policy Violations.
+  ## This will help us catch Policy Violations before they are merged into Develop.        
+  evaluate_fossid_gates:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout FossID Scripts Repo
+        uses: actions/checkout@v4
+        with: 
+          repository: fossid-ab/workbench-api-samples
+
+      - name: Evaluate Post Scan Gates
+        run: |
+          python post-scan-gates/post_scan_gates.py \
+          --workbench-url ${{ secrets.WORKBENCH_URL }} \
+          --workbench-user ${{ secrets.WORKBENCH_USER }} \
+          --workbench-token ${{ secrets.WORKBENCH_TOKEN }} \
+          --scan-code $GITHUB_REPOSITORY/$GITHUB_HEAD_REF \
+          --policy-check

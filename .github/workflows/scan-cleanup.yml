@@ -1,0 +1,24 @@
+## This workflow deletes a scan for a Feature Branch after it's merged into Develop.
+name: Delete Scans for Closed PR
+
+on:
+  pull_request:
+    branches: [ develop ]
+    types: [closed]
+
+jobs:
+  clean_fr_scan:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout FossID Scripts Repo
+        uses: actions/checkout@v4
+        with: 
+          repository: fossid-ab/workbench-api-samples
+
+      - name: Delete Branch Scan for Closed PR
+        run: |
+          python delete-scan/delete_scan.py \
+          --workbench-url ${{ secrets.WORKBENCH_URL }} \
+          --workbench-user ${{ secrets.WORKBENCH_USER }} \
+          --workbench-token ${{ secrets.WORKBENCH_TOKEN }} \
+          --scan-code $GITHUB_REPOSITORY/$GITHUB_HEAD_REF 
