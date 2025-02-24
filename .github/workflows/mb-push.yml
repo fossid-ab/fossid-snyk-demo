@@ -35,14 +35,14 @@ jobs:
 
       - name: Run Workbench Agent
         run: |
-          docker run -v "${{ github.workspace }}:"/tmp/scan_target" \
+          docker run -v ${{ github.workspace }}:/tmp/scan_target \
                      quay.io/fossid/workbench-agent:0.7.0 \
             --api_url ${{ secrets.WORKBENCH_URL }} \
             --api_user ${{ secrets.WORKBENCH_USER }} \
             --api_token ${{ secrets.WORKBENCH_TOKEN }} \
             --project_code $GITHUB_REPOSITORY \
             --scan_code $GITHUB_REPOSITORY/$GITHUB_REF_NAME \
-            --path "/tmp/scan_target/code.zip" \
+            --path /tmp/scan_target/code.zip \
             --chunked_upload \
             --auto_identification_detect_declaration \
             --auto_identification_detect_copyright \
