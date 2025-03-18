@@ -8,24 +8,24 @@ on:
 jobs:
   ## First, we run the Diff Scanner (Stateless Scan).
   ## This will annotate the PR with newly found snippets.
-  #run-diffscan:
-  #  name: FossID Annotate PR
-  #  runs-on: ubuntu-latest
-  #  container:
-  #    image: quay.io/fossid/fossid-cicd:latest
-  #    credentials:
-  #      username: ${{ secrets.QUAY_USER }}
-  #      password: ${{ secrets.QUAY_TOKEN }}
-  #  steps:
-  #    - name: Checkout code
-  #      uses: actions/checkout@v4
-  #    - name: Run fossid-cicd
-  #      run: |
-  #        fossid-cicd \
-  #        diff-scan \
-  #        --fossid-host ${{ secrets.KB_URL }} \
-  #        --fossid-token ${{ secrets.KB_TOKEN }} \
-  #        --github-workflow-errors
+  run-diffscan:
+    name: FossID Annotate PR
+    runs-on: ubuntu-latest
+    container:
+      image: quay.io/fossid/fossid-cicd:latest
+      credentials:
+        username: ${{ secrets.QUAY_USER }}
+        password: ${{ secrets.QUAY_TOKEN }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Run fossid-cicd
+        run: |
+          fossid-cicd \
+          diff-scan \
+          --fossid-host ${{ secrets.KB_URL }} \
+          --fossid-token ${{ secrets.KB_TOKEN }} \
+          --github-workflow-errors
 
   ## Next, we will check if the scan for the HEAD branch has Policy Violations.
   ## This will help us catch Policy Violations before they are merged into Develop.        
