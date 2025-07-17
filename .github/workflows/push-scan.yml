@@ -1,12 +1,11 @@
-## This Workflow runs when code is pushed into the Develop or PROD branches.
-## This ensures Workbench has up-to-date reports for these branches.
+## This Workflow runs when code is pushed into the Develop branch.
+## It can also be run to scan any other branch manually.
+## This ensures Workbench has up-to-date reports for a branches.
 name: FossID - Scan Branch
 
 on: 
   push:
-    branches:
-    - 'develop'
-    - 'PROD'
+    branches: develop
     paths-ignore:
       - '.github/workflows/**'
   workflow_dispatch:
