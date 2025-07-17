@@ -10,46 +10,38 @@ on:
     - 'PROD'
       
 jobs:
-  fossid_scan:
+  workbench-scan:
     runs-on: ubuntu-latest
+    env:
+      WORKBENCH_URL: ${{ secrets.WORKBENCH_URL }}
+      WORKBENCH_USER: ${{ secrets.WORKBENCH_USER }}
+      WORKBENCH_TOKEN: ${{ secrets.WORKBENCH_TOKEN }}
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
+    - name: Scan by Cloning from Git
+      run: |
+        docker run ghcr.io/tomgonzo/workbench-cli:latest \
+        --api-url ${{ env.WORKBENCH_URL }} \
+        --api-user ${{ env.WORKBENCH_USER }} \
+        --api-token ${{ env.WORKBENCH_TOKEN }} \
+        scan-git \
+        --project-name $GITHUB_REPOSITORY \
+        --scan-name $GITHUB_REF_NAME \
+        --git-url $GITHUB_SERVER_URL/$GITHUB_REPOSITORY \
+        --git-branch $GITHUB_REF_NAME \
+        --git-depth 1 \
+        --show-scan-metrics
 
-      - name: Zip Code; Ignoring File Types
-        run: |
-          zip -r $GITHUB_WORKSPACE/code.zip . -x \
-          '*.tmp' '*.temp' '*.bak' \
-          '*.cache' '*.db' '*.idx' \
-          '*.log' '*.txt' '*.event' \
-          '*.sample' '*.demo' '*.example' \
-          '*.sql' '*.hprof' '*.dmp' \
-          '.gitignore' '.dockerignore' '.snyk' \
-          '.git/*' '.github/*'
-
-      - name: Checkout FossID Workbench Agent Repo
-        uses: actions/checkout@v4
-        with: 
-          repository: fossid-ab/workbench-agent
-          path: fossid-tools
-
-      - name: Prepare Workbench Agent
-        run: pip install -r fossid-tools/requirements.txt
-
-      ## For Feature Branches, we omit License Extraction
-      ## This speeds up the scan for Feature Branches.
-      - name: Run Workbench Agent
-        run: |
-          python fossid-tools/workbench-agent.py \
-            --api_url ${{ secrets.WORKBENCH_URL }} \
-            --api_user ${{ secrets.WORKBENCH_USER }} \
-            --api_token ${{ secrets.WORKBENCH_TOKEN }} \
-            --project_code $GITHUB_REPOSITORY \
-            --scan_code $GITHUB_REPOSITORY/$GITHUB_REF_NAME \
-            --path $GITHUB_WORKSPACE/code.zip \
-            --chunked_upload \
-            --reuse_identifications \
-            --identification_reuse_type specific_project \
-            --specific_code $GITHUB_REPOSITORY \
-            --run_dependency_analysis \
-            --delta_only 
+    - name: Show Scan Results
+      run: |
+        docker run ghcr.io/tomgonzo/workbench-cli:latest \
+        --api-url ${{ env.WORKBENCH_URL }} \
+        --api-user ${{ env.WORKBENCH_USER }} \
+        --api-token ${{ env.WORKBENCH_TOKEN }} \
+        show-results \
+        --project-name $GITHUB_REPOSITORY \
+        --scan-name $GITHUB_REF_NAME \
+        --show-components \
+        --show-dependencies \
+        --show-licenses \
+        --show-policy-warnings \
+        --show-vulnerabilities
