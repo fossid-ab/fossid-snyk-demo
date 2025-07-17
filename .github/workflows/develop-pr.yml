@@ -6,42 +6,94 @@ on:
     branches: [ develop ]
 
 jobs:
-  ## First, we run the Diff Scanner (Stateless Scan).
-  ## This will annotate the PR with newly found snippets.
-  run-diffscan:
-    name: FossID Annotate PR
+  stateless-diffscan:
+    name: Run FossID DiffScan
     runs-on: ubuntu-latest
+    env:
+      QUAY_USER: ${{ secrets.QUAY_USER }}
+      QUAY_TOKEN: ${{ secrets.QUAY_TOKEN }}
+      KB_URL: ${{ secrets.KB_URL }}
+      KB_TOKEN: ${{ secrets.KB_TOKEN }}
     container:
-      image: quay.io/fossid/fossid-cicd:latest
+      image: quay.io/fossid/fossid-toolbox:latest
       credentials:
-        username: ${{ secrets.QUAY_USER }}
-        password: ${{ secrets.QUAY_TOKEN }}
+        username: ${{ env.QUAY_USER }}
+        password: ${{ env.QUAY_TOKEN }}
+    outputs:
+      scan-result: ${{ steps.diffscan.outcome }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      - name: Run fossid-cicd
+        
+      - name: Run DiffScan
+        id: diffscan
+        continue-on-error: true
         run: |
-          fossid-cicd \
-          diff-scan \
-          --fossid-host ${{ secrets.KB_URL }} \
-          --fossid-token ${{ secrets.KB_TOKEN }} \
-          --github-workflow-errors
+          fossid \
+            diffscan \
+            --fossid-host ${{ env.KB_URL }} \
+            --fossid-token ${{ env.KB_TOKEN }} \
+            --github-workflow-errors \
+            --fail-on-any-issues 1
 
-  ## Next, we will check if the scan for the HEAD branch has Policy Violations.
-  ## This will help us catch Policy Violations before they are merged into Develop.        
-  evaluate_fossid_gates:
+  diffscan-with-workbench:
+    name: Run Workbench DiffScan
     runs-on: ubuntu-latest
-    steps:
-      - name: Checkout FossID Scripts Repo
-        uses: actions/checkout@v4
-        with: 
-          repository: fossid-ab/workbench-api-samples
+    needs: stateless-diffscan
+    if: needs.stateless-diffscan.outputs.scan-result == 'failure'
+    env:
+      WORKBENCH_URL: ${{ secrets.WORKBENCH_URL }}
+      WORKBENCH_USER: ${{ secrets.WORKBENCH_USER }}
+      WORKBENCH_TOKEN: ${{ secrets.WORKBENCH_TOKEN }}
 
-      - name: Evaluate Post Scan Gates
+    steps:
+      - name: Checkout Target Repo
+        uses: actions/checkout@v4
+        with:
+          path: target-repo
+          fetch-depth: 0 # Fetch all history for all branches and tags
+
+      - name: Fetch Base and Head Branches
+        working-directory: target-repo
         run: |
-          python post-scan-gates/post_scan_gates.py \
-          --workbench-url ${{ secrets.WORKBENCH_URL }} \
-          --workbench-user ${{ secrets.WORKBENCH_USER }} \
-          --workbench-token ${{ secrets.WORKBENCH_TOKEN }} \
-          --scan-code $GITHUB_REPOSITORY/$GITHUB_HEAD_REF \
-          --policy-check
+          git fetch origin ${{ github.base_ref }}:${{ github.base_ref }}
+          git fetch origin ${{ github.head_ref }}:${{ github.head_ref }}
+          git branch -a
+
+      - name: Create Archive of Changed Files
+        working-directory: target-repo
+        run: |
+          # Get the list of changed files and create archive
+          CHANGED_FILES=$(git diff --name-only --diff-filter=d ${{ github.base_ref }} ${{ github.head_ref }})
+          echo "$CHANGED_FILES" | zip -@ ../diff-archive.zip
+          echo "Archive created: ../diff-archive.zip"
+          ls -la ../diff-archive.zip
+      
+      - name: Scan Files Changed by PR
+        run: |
+          docker run --rm \
+            -v $GITHUB_WORKSPACE/diff-archive.zip:/scan_target/diff-archive.zip:ro \
+            ghcr.io/tomgonzo/workbench-cli:latest \
+            --api-url ${{ env.WORKBENCH_URL }} \
+            --api-user ${{ env.WORKBENCH_USER }} \
+            --api-token ${{ env.WORKBENCH_TOKEN }} \
+            scan \
+            --project-name $GITHUB_REPOSITORY \
+            --scan-name DiffOnly-$GITHUB_HEAD_REF \
+            --path /scan_target/diff-archive.zip \
+            --autoid-file-licenses \
+            --autoid-file-copyrights \
+            --show-scan-metrics
+    
+      - name: Evaluate Gates
+        run: |
+          docker run --rm \
+            ghcr.io/tomgonzo/workbench-cli:latest \
+            --api-url ${{ env.WORKBENCH_URL }} \
+            --api-user ${{ env.WORKBENCH_USER }} \
+            --api-token ${{ env.WORKBENCH_TOKEN }} \
+            evaluate-gates \
+            --project-name $GITHUB_REPOSITORY \
+            --scan-name DiffOnly-$GITHUB_HEAD_REF \
+            --fail-on-pending \
+            --fail-on-policy
