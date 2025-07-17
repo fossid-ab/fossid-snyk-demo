@@ -1,13 +1,9 @@
 ## This workflow runs any time code is pushed to a branch.
 ## By doing so, new Feature Branches will have up-to-date results in Workbench.
-name: Update Feature Branch Scan
+name: FossID - Audit Branch
 
-## The Develop and PROD branches are excluded from this workflow.
-on: 
-  push:
-    branches-ignore:
-    - 'develop'
-    - 'PROD'
+## This workflow is manually triggered.
+on: workflow_dispatch
       
 jobs:
   workbench-scan:
