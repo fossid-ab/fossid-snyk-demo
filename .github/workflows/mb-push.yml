@@ -1,6 +1,6 @@
 ## This Workflow runs when code is pushed into the Develop or PROD branches.
 ## This ensures Workbench has up-to-date reports for these branches.
-name: Update Main Branch Scan
+name: FossID - Scan Branch
 
 on: 
   push:

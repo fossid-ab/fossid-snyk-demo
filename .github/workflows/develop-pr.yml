@@ -1,5 +1,5 @@
 ## This workflow runs when a PR is opened for the Develop Branch.
-name: Checks on PR to Develop
+name: FossID - Scan PR Diff
 
 on:
   pull_request:
@@ -7,8 +7,8 @@ on:
 
 jobs:
   stateless-diffscan:
-    name: Run FossID DiffScan
     runs-on: ubuntu-latest
+    name: Run Toolbox DiffScan
     env:
       QUAY_USER: ${{ secrets.QUAY_USER }}
       QUAY_TOKEN: ${{ secrets.QUAY_TOKEN }}
@@ -22,10 +22,10 @@ jobs:
     outputs:
       scan-result: ${{ steps.diffscan.outcome }}
     steps:
-      - name: Checkout code
+      - name: Checkout Repo
         uses: actions/checkout@v4
         
-      - name: Run DiffScan
+      - name: Run Toolbox DiffScan
         id: diffscan
         continue-on-error: true
         run: |
@@ -47,7 +47,7 @@ jobs:
       WORKBENCH_TOKEN: ${{ secrets.WORKBENCH_TOKEN }}
 
     steps:
-      - name: Checkout Target Repo
+      - name: Checkout Repo
         uses: actions/checkout@v4
         with:
           path: target-repo

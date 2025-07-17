@@ -7,19 +7,22 @@ on:
     
 ## This job checks that the HEAD branch does not introduce risks into PROD.    
 jobs:
-  evaluate_fossid_gates:
+  workbench-gates:
     runs-on: ubuntu-latest
+    env:
+      WORKBENCH_URL: ${{ secrets.WORKBENCH_URL }}
+      WORKBENCH_USER: ${{ secrets.WORKBENCH_USER }}
+      WORKBENCH_TOKEN: ${{ secrets.WORKBENCH_TOKEN }}
     steps:
-      - name: Checkout FossID Scripts Repo
-        uses: actions/checkout@v4
-        with: 
-          repository: fossid-ab/workbench-api-samples
-
-      - name: Evaluate Post Scan Gates
+      - name: Evaluate Gates
         run: |
-          python post-scan-gates/post_scan_gates.py \
-          --workbench-url ${{ secrets.WORKBENCH_URL }} \
-          --workbench-user ${{ secrets.WORKBENCH_USER }} \
-          --workbench-token ${{ secrets.WORKBENCH_TOKEN }} \
-          --scan-code $GITHUB_REPOSITORY/$GITHUB_HEAD_REF \
-          --policy-check
+          docker run --rm \
+            ghcr.io/tomgonzo/workbench-cli:latest \
+            --api-url ${{ env.WORKBENCH_URL }} \
+            --api-user ${{ env.WORKBENCH_USER }} \
+            --api-token ${{ env.WORKBENCH_TOKEN }} \
+            evaluate-gates \
+            --project-name $GITHUB_REPOSITORY \
+            --scan-name $GITHUB_HEAD_REF \
+            --fail-on-pending \
+            --fail-on-policy
